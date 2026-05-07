@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOfficer() {
+      return isAuthenticated() && userRole() in ['campus_security', 'juja_nps', 'gwo_admin'];
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && userRole() == 'gwo_admin';
+    }
+
+    // -- Users -- role + profile. Self-write only; role field flips to 'survivor' by default.
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isOfficer());
+      allow create: if isAuthenticated() && isOwner(userId)
+        && request.resource.data.role == 'survivor';
+      allow update: if isAuthenticated() && isOwner(userId)
+        && request.resource.data.role == resource.data.role;
+    }
+
+    // -- Reports -- WORM. Once submitted, content is immutable. Officers can read; reporter can read own.
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (resource.data.reporterId == request.auth.uid || isOfficer());
+      allow update: if isOfficer()
+        && request.resource.data.reporterId == resource.data.reporterId
+        && request.resource.data.incidentType == resource.data.incidentType
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.timestamp == resource.data.timestamp;
+      allow delete: if false;
+    }
+
+    // -- Active SOS -- status flips allowed (active ? resolved); incident origin is immutable.
+    match /active_sos/{sosId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isOfficer());
+      allow update: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid || isOfficer())
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.timestamp == resource.data.timestamp;
+      allow delete: if false;
+    }
+
+    // -- Alert logs -- append-only audit of fan-out events.
+    match /alert_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read: if isOfficer();
+      allow update, delete: if false;
+    }
+
+    // -- Audit logs -- append-only system audit trail.
+    match /audit_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read: if isOfficer();
+      allow update, delete: if false;
+    }
+
+    // -- Tracking sessions --
+    match /tracking_sessions/{sessionId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated(); 
+      allow update, delete: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid || isOfficer());
+
+      match /shares/{shareId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // -- Chats --
+    match /chats/{chatId} {
+      allow create: if isAuthenticated();
+      allow read, update: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid || isOfficer());
+
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // -- Escalations -- high-risk flags from chat
+    match /escalations/{escalationId} {
+      allow create: if isAuthenticated();
+      allow read: if isOfficer();
+      allow update, delete: if false;
+    }
+
+    // -- Support Requests -- chat handoffs etc.
+    match /support_requests/{requestId} {
+      allow create: if isAuthenticated();
+      allow read, update: if isOfficer();
+      allow delete: if false;
+    }
+  }
+}

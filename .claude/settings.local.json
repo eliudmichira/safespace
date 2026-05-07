@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk ls *)",
+      "Bash(rtk find *)",
+      "Bash(firebase --version)",
+      "Bash(rtk npm *)",
+      "Bash(firebase deploy *)",
+      "Bash(firebase login:list)",
+      "Bash(rtk wc *)",
+      "Bash(rtk curl *)",
+      "Read(//tmp/**)",
+      "Bash(python -c ' *)",
+      "Bash(rtk read *)",
+      "Bash(rtk grep *)",
+      "Bash(npm install *)",
+      "Bash(rtk tsc *)"
+    ]
+  }
+}

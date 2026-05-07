@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeSpace | AI-Driven GBV Reporting & Counseling</title>
+    <meta name="description" content="AI-Driven Gender-Based Violence Reporting and Counseling System for JKUAT University and Juja NPS. Secure, anonymous, and immediate support.">
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="glass-nav">
+            <div class="logo">
+                <i class="fas fa-shield-heart"></i>
+                <span>SafeSpace</span>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active" data-section="home">Home</a>
+                <a href="#report" class="nav-link" data-section="report">Report</a>
+                <a href="#counsel" class="nav-link" data-section="counsel">Counseling</a>
+                <a href="#dashboard" class="nav-link" data-section="dashboard">Dashboard</a>
+            </div>
+            <div class="sos-nav-btn" id="sos-trigger-nav">
+                <button class="sos-btn-small">SOS</button>
+            </div>
+        </nav>
+
+        <main id="content">
+            <!-- Home Section -->
+            <section id="home" class="section active">
+                <div class="hero">
+                    <div class="hero-content">
+                        <h1 class="gradient-text">Your Safety, <br>Our Priority.</h1>
+                        <p class="hero-subtitle">Immediate, AI-driven support and reporting for Gender-Based Violence. Secure, anonymous, and coordinated with JKUAT Security & Juja NPS.</p>
+                        <div class="hero-cta">
+                            <button class="btn primary-btn" id="start-report-btn">File a Report</button>
+                            <button class="btn secondary-btn" id="start-counseling-btn">Talk to Someone</button>
+                        </div>
+                    </div>
+                    <div class="hero-sos">
+                        <div class="sos-orb-container">
+                            <div class="sos-pulse"></div>
+                            <button class="sos-main-btn" id="main-sos-trigger">
+                                <span>SOS</span>
+                                <small>Press & Hold</small>
+                            </button>
+                        </div>
+                        <p class="sos-hint">Activates real-time alerts to Security and Police</p>
+                    </div>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card glass">
+                        <i class="fas fa-user-secret"></i>
+                        <h3>Anonymous Reporting</h3>
+                        <p>Share your experience without revealing your identity. Encrypted and secure.</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <i class="fas fa-robot"></i>
+                        <h3>AI Counseling</h3>
+                        <p>24/7 trauma-informed psychological first aid powered by specialized NLP.</p>
+                    </div>
+                    <div class="feature-card glass">
+                        <i class="fas fa-map-location-dot"></i>
+                        <h3>Real-time Alerts</h3>
+                        <p>Synchronized GPS alerts to JKUAT Security and Juja NPS in milliseconds.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Report Section -->
+            <section id="report" class="section">
+                <div class="container narrow">
+                    <h2 class="section-title">Anonymous Incident Report</h2>
+                    <div class="report-wizard glass">
+                        <div class="wizard-steps">
+                            <div class="step active" data-step="1">1</div>
+                            <div class="step" data-step="2">2</div>
+                            <div class="step" data-step="3">3</div>
+                        </div>
+                        <div class="wizard-content">
+                            <!-- Step 1: Basic Info -->
+                            <div class="wizard-pane active" id="report-step-1">
+                                <h3>Incident Details</h3>
+                                <div class="form-group">
+                                    <label>Type of Incident</label>
+                                    <select id="incident-type">
+                                        <option value="">Select type...</option>
+                                        <option value="harassment">Harassment</option>
+                                        <option value="assault">Physical Assault</option>
+                                        <option value="coercion">Coercion</option>
+                                        <option value="stalking">Stalking</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Location</label>
+                                    <input type="text" id="incident-location" placeholder="e.g., Near Hall 6, JKUAT">
+                                </div>
+                                <button class="btn primary-btn next-step">Next</button>
+                            </div>
+                            <!-- Step 2: Narrative -->
+                            <div class="wizard-pane" id="report-step-2">
+                                <h3>Describe what happened</h3>
+                                <p class="form-hint">Our AI will help identify forensic markers for documentation.</p>
+                                <div class="form-group">
+                                    <textarea id="incident-narrative" rows="6" placeholder="Tell us what happened in your own words..."></textarea>
+                                </div>
+                                <div class="wizard-actions">
+                                    <button class="btn ghost-btn prev-step">Back</button>
+                                    <button class="btn primary-btn next-step">Next</button>
+                                </div>
+                            </div>
+                            <!-- Step 3: Confirmation -->
+                            <div class="wizard-pane" id="report-step-3">
+                                <h3>Submit Report</h3>
+                                <p>Your report will be sent securely to the JKUAT Gender Welfare Office and Juja NPS. It will remain anonymous unless you choose otherwise.</p>
+                                <div class="form-group checkbox-group">
+                                    <input type="checkbox" id="consent-contact">
+                                    <label for="consent-contact">I consent to being contacted by a counselor.</label>
+                                </div>
+                                <div class="wizard-actions">
+                                    <button class="btn ghost-btn prev-step">Back</button>
+                                    <button class="btn secondary-btn" id="submit-report-final">Submit Securely</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Counseling Section -->
+            <section id="counsel" class="section">
+                <div class="container">
+                    <div class="chat-layout glass">
+                        <div class="chat-sidebar">
+                            <div class="chat-bot-profile">
+                                <div class="bot-avatar">
+                                    <i class="fas fa-heart-pulse"></i>
+                                </div>
+                                <h3>SafeSpace AI</h3>
+                                <p>Trauma-Informed Assistant</p>
+                            </div>
+                            <div class="emergency-links">
+                                <h4>Quick Support</h4>
+                                <a href="tel:911" class="emergency-link"><i class="fas fa-phone"></i> Campus Security</a>
+                                <a href="tel:112" class="emergency-link"><i class="fas fa-phone"></i> Juja NPS</a>
+                                <a href="#" class="emergency-link"><i class="fas fa-book"></i> Your Rights</a>
+                            </div>
+                        </div>
+                        <div class="chat-main">
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="message bot-message">
+                                    <div class="message-content">
+                                        Hello. I am SafeSpace AI. I'm here to provide immediate emotional support and guidance. How are you feeling right now?
+                                    </div>
+                                    <div class="message-time">Just now</div>
+                                </div>
+                            </div>
+                            <div class="chat-input-area">
+                                <input type="text" id="user-chat-input" placeholder="Type your message here...">
+                                <button id="send-chat-btn"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="container">
+                    <div class="dashboard-grid">
+                        <div class="stat-card glass">
+                            <span class="stat-label">Active Alerts</span>
+                            <span class="stat-value pulse-text">0</span>
+                        </div>
+                        <div class="stat-card glass">
+                            <span class="stat-label">Reports Today</span>
+                            <span class="stat-value">12</span>
+                        </div>
+                        <div class="stat-card glass">
+                            <span class="stat-label">Hotspots Identified</span>
+                            <span class="stat-value">3</span>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-main glass">
+                        <div class="dashboard-header">
+                            <h3>Real-time Incident Monitor</h3>
+                            <div class="dash-filters">
+                                <span class="badge red">Live</span>
+                                <span class="badge blue">JKUAT Main Campus</span>
+                            </div>
+                        </div>
+                        <div class="map-placeholder">
+                            <!-- Simulated Map UI -->
+                            <div class="map-bg"></div>
+                            <div class="map-overlay">
+                                <div class="map-marker" style="top: 40%; left: 60%;"></div>
+                                <div class="map-marker warning" style="top: 70%; left: 30%;"></div>
+                            </div>
+                        </div>
+                        <div class="incident-list">
+                            <div class="incident-item">
+                                <div class="inc-time">14:02</div>
+                                <div class="inc-desc">Harassment Report - Hall 6 Area</div>
+                                <div class="inc-status"><span class="badge outline">In Progress</span></div>
+                            </div>
+                            <div class="incident-item">
+                                <div class="inc-time">12:45</div>
+                                <div class="inc-desc">SOS Trigger - Library Basement</div>
+                                <div class="inc-status"><span class="badge green">Resolved</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- SOS Activation Overlay -->
+        <div id="sos-overlay" class="overlay">
+            <div class="sos-countdown-container">
+                <div class="sos-ring"></div>
+                <div class="sos-counter">3</div>
+                <h2 class="sos-title">ACTIVATING EMERGENCY ALERTS</h2>
+                <p>Notifying JKUAT Security & Juja NPS...</p>
+                <button class="btn ghost-btn cancel-sos">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
