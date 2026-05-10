@@ -50,6 +50,9 @@ interface SOS {
   lng: number | null
   time: Date
   resolvedAt: Date | null
+  respondedAt?: Date | null
+  respondingOfficerId?: string | null
+  respondingOfficerRole?: string | null
 }
 
 interface Report {
@@ -96,7 +99,9 @@ function OfficerDashboard() {
   const { user, role } = useAuth()
   const { toast } = useToast()
   const [activeSOS, setActiveSOS] = useState<SOS[]>([])
+  const [allSOS, setAllSOS] = useState<SOS[]>([])
   const [reports, setReports] = useState<Report[]>([])
+  const [officers, setOfficers] = useState<Record<string, { role: string; email?: string }>>({})
 
   useEffect(() => {
     const sosQ = query(collection(db, "active_sos"), orderBy("timestamp", "desc"))
@@ -111,8 +116,12 @@ function OfficerDashboard() {
           lng: data.currentLocation?.lng ?? null,
           time: data.timestamp?.toDate?.() || new Date(),
           resolvedAt: data.resolvedAt?.toDate?.() || null,
+          respondedAt: data.respondedAt?.toDate?.() || null,
+          respondingOfficerId: data.respondingOfficerId || null,
+          respondingOfficerRole: data.respondingOfficerRole || null,
         }
       })
+      setAllSOS(items)
       setActiveSOS(items.filter((i) => i.status !== "resolved"))
     })
 
@@ -132,12 +141,28 @@ function OfficerDashboard() {
           anonymous: data.reportType === "anonymous",
         }
       })
-      setReports(items.slice(0, 10))
+      setReports(items)
+    })
+
+    const officersQ = query(
+      collection(db, "users"),
+      // where("role", "in", ["campus_security", "juja_nps", "gwo_admin"]),
+    )
+    const unsubOfficers = onSnapshot(officersQ, (snap) => {
+      const map: Record<string, { role: string; email?: string }> = {}
+      snap.docs.forEach((d) => {
+        const data = d.data() as any
+        if (["campus_security", "juja_nps", "gwo_admin"].includes(data.role)) {
+          map[d.id] = { role: data.role, email: data.email }
+        }
+      })
+      setOfficers(map)
     })
 
     return () => {
       unsubSOS()
       unsubReports()
+      unsubOfficers()
     }
   }, [])
 
@@ -233,9 +258,9 @@ function OfficerDashboard() {
             />
             <StatCard
               icon={FileText}
-              label="Open Reports"
-              value={pendingReports}
-              tone={pendingReports > 0 ? "warning" : "muted"}
+              label="Total Reports"
+              value={reports.length}
+              tone={reports.length > 0 ? "warning" : "muted"}
             />
             <StatCard
               icon={Radio}
@@ -338,59 +363,87 @@ function OfficerDashboard() {
             </div>
           </section>
 
-          {/* Recent reports */}
+          {/* Response log */}
           <section className="card-embossed p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Recent Reports
+                <Clock className="h-5 w-5 text-primary" />
+                Response Log
               </h2>
-              <Link
-                href="/report"
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                View all
-              </Link>
+              <span className="text-xs text-muted-foreground">
+                {allSOS.filter(s => s.status === 'resolved').length} resolved · {allSOS.length} total
+              </span>
             </div>
 
-            {reports.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                No reports yet.
+            {allSOS.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground recessed rounded-2xl">
+                No incidents in the log yet.
               </div>
             ) : (
-              <ul className="divide-y divide-border/50">
-                {reports.map((r) => (
-                  <li key={r.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{r.type}</span>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] uppercase",
-                            r.priority === "critical" && "border-emergency text-emergency",
-                            r.priority === "high" && "border-warning text-warning",
-                            r.priority === "medium" && "border-primary text-primary",
-                          )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border/50">
+                      <th className="text-left px-4 py-3 font-bold">Incident</th>
+                      <th className="text-left px-4 py-3 font-bold">Triggered</th>
+                      <th className="text-left px-4 py-3 font-bold">Status</th>
+                      <th className="text-left px-4 py-3 font-bold">Responder</th>
+                      <th className="text-left px-4 py-3 font-bold">Resolved</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allSOS.slice(0, 15).map((s) => {
+                      const officer = s.respondingOfficerId
+                        ? officers[s.respondingOfficerId]
+                        : null
+                      const officerLabel = officer
+                        ? officer.email ||
+                          `${officer.role.replace("_", " ")}`
+                        : s.respondingOfficerId
+                          ? `${s.respondingOfficerRole?.replace("_", " ") || "officer"}`
+                          : null
+                      
+                      return (
+                        <tr
+                          key={s.id}
+                          className="border-b border-border/30 last:border-0 hover:bg-muted/10 transition-colors"
                         >
-                          {r.priority}
-                        </Badge>
-                        {r.anonymous && (
-                          <Badge variant="outline" className="text-[10px] uppercase">
-                            anon
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatTime(r.date)} · {r.status}
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-mono text-muted-foreground shrink-0">
-                      {r.id.slice(0, 6)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                          <td className="px-4 py-3 font-mono text-xs">{s.id.slice(0, 8)}</td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {formatTime(s.time)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className={cn(
+                              "pill text-[10px] uppercase",
+                              s.status === "active" ? "bg-emergency text-emergency-foreground" :
+                              s.status === "responding" ? "bg-warning text-warning-foreground" :
+                              "bg-safe text-safe-foreground"
+                            )}>
+                              {s.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            {officerLabel ? (
+                              <div className="flex flex-col">
+                                <span className="text-xs font-semibold truncate max-w-[150px]">
+                                  {officerLabel}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">
+                                Unassigned
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {s.resolvedAt ? formatTime(s.resolvedAt) : "—"}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 

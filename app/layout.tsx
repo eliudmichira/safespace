@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Outfit, Geist_Mono } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/contexts/AuthContext'
 import './globals.css'
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'SafeSpace - GBV Emergency Response',

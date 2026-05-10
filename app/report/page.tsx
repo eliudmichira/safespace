@@ -12,9 +12,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/contexts/AuthContext"
-import { db, storage, auth } from "@/lib/firebase"
+import { db, auth } from "@/lib/firebase"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { 
   Upload, 
   Shield, 
@@ -50,7 +49,7 @@ interface FormData {
 }
 
 interface UploadedFile {
-  file: File
+  url: string
   name: string
   type: string
   size: number
@@ -60,6 +59,7 @@ export default function ReportPage() {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set())
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const { toast } = useToast()
   const { user, loginAnonymously } = useAuth()
@@ -90,19 +90,69 @@ export default function ReportPage() {
     }))
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (files) {
-      const newFiles = Array.from(files).map((file) => ({
-        file: file,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      }))
-      setUploadedFiles((prev) => [...prev, ...newFiles])
+    if (!files || files.length === 0) return
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+    if (!cloudName || !uploadPreset) {
       toast({
-        title: "File Uploaded",
-        description: `${files.length} file(s) added to your report.`,
+        title: "Configuration Missing",
+        description: "Cloudinary settings not found in .env.local",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newUploadedFiles: UploadedFile[] = []
+    
+    for (const file of Array.from(files)) {
+      const fileId = `${file.name}-${file.size}-${Date.now()}`
+      setUploadingFiles(prev => new Set(prev).add(fileId))
+      
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("upload_preset", uploadPreset)
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
+          { method: "POST", body: formData }
+        )
+
+        if (!response.ok) throw new Error("Upload failed")
+        
+        const data = await response.json()
+        
+        newUploadedFiles.push({
+          url: data.secure_url,
+          name: file.name,
+          type: file.type || "unknown",
+          size: file.size,
+        })
+      } catch (error) {
+        console.error("Cloudinary upload error:", error)
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload ${file.name}`,
+          variant: "destructive",
+        })
+      } finally {
+        setUploadingFiles(prev => {
+          const next = new Set(prev)
+          next.delete(fileId)
+          return next
+        })
+      }
+    }
+
+    if (newUploadedFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...newUploadedFiles])
+      toast({
+        title: "Upload Complete",
+        description: `Successfully uploaded ${newUploadedFiles.length} file(s).`,
       })
     }
   }
@@ -123,30 +173,8 @@ export default function ReportPage() {
       
       if (!currentUser) throw new Error("Authentication failed");
 
-      // Upload files with Base64 fallback if Storage fails (CORS or rules issues)
-      const fileUrls: string[] = [];
-      for (const uploadedFile of uploadedFiles) {
-        try {
-          const fileRef = ref(storage, `evidence/${currentUser.uid}/${Date.now()}_${uploadedFile.name}`);
-          await uploadBytes(fileRef, uploadedFile.file);
-          const url = await getDownloadURL(fileRef);
-          fileUrls.push(url);
-        } catch (storageError) {
-          console.warn("Storage upload failed, falling back to Base64:", storageError);
-          // Fallback to Base64 Data URI if file is small enough (< 1MB for Firestore safety)
-          if (uploadedFile.size < 800000) {
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(uploadedFile.file);
-            });
-            fileUrls.push(base64);
-          } else {
-            console.error("File too large for Base64 fallback");
-            throw storageError; // Rethrow if it's too big to fallback
-          }
-        }
-      }
+      // Files are already uploaded to UploadThing by this point
+      const fileUrls = uploadedFiles.map(f => f.url);
 
       // Add document to Firestore
       await addDoc(collection(db, "reports"), {
@@ -466,26 +494,31 @@ export default function ReportPage() {
                 {/* File Upload */}
                 <div className="space-y-4">
                   <Label className="text-lg font-bold">Supporting Evidence</Label>
-                  <div className="recessed p-12 rounded-[2rem] text-center transition-all hover:bg-black/5 group cursor-pointer border-2 border-dashed border-white/10">
+                  <div className="recessed p-12 rounded-[2rem] text-center transition-all hover:bg-black/5 group cursor-pointer border-2 border-dashed border-white/10 relative">
                     <input
                       type="file"
                       id="file-upload"
                       multiple
                       accept="image/*,audio/*,video/*,.pdf,.doc,.docx"
                       onChange={handleFileUpload}
-                      className="hidden"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      disabled={uploadingFiles.size > 0}
                     />
-                    <label htmlFor="file-upload" className="cursor-pointer">
+                    <div className="pointer-events-none">
                       <div className="h-20 w-20 rounded-full lifted bg-primary/5 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-all">
-                        <Upload className="h-10 w-10 text-primary" />
+                        {uploadingFiles.size > 0 ? (
+                          <div className="h-10 w-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        ) : (
+                          <Upload className="h-10 w-10 text-primary" />
+                        )}
                       </div>
                       <p className="text-xl font-bold text-foreground mb-2">
-                        Drop files or click to browse
+                        {uploadingFiles.size > 0 ? "Uploading..." : "Drop files or click to browse"}
                       </p>
                       <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                        Upload photos, voice notes, messages, or documents that support your report.
+                        Cloudinary Secure Upload — Any file type supported.
                       </p>
-                    </label>
+                    </div>
                   </div>
                   
                   {/* Uploaded Files List */}

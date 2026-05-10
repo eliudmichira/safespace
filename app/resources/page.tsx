@@ -40,8 +40,8 @@ const SECTIONS = [
       },
       {
         label: "FIDA Kenya — Free Legal Aid",
-        value: "fida.or.ke",
-        href: "https://www.fida.or.ke/",
+        value: "fidakenya.org",
+        href: "https://www.fidakenya.org/",
       },
       {
         label: "COVAW — Coalition on Violence Against Women",
@@ -77,6 +77,7 @@ const SECTIONS = [
     color: "text-primary",
     items: [
       { label: "Gender Welfare Office (GWO)", value: "Admin Block, Room 205" },
+      { label: "Counselling team", value: "Technology house, ground floor" },
       { label: "Legal Aid Clinic", value: "Wednesdays, 2:00–5:00 PM, Law Faculty" },
       { label: "Dean of Students", value: "Admin Block, Ground Floor" },
     ],
@@ -87,14 +88,9 @@ const SECTIONS = [
     color: "text-safe",
     items: [
       {
-        label: "JKUAT Sexual Harassment Policy",
-        value: "Full policy document",
-        href: "https://www.jkuat.ac.ke/about/policies/",
-      },
-      {
-        label: "JKUAT Gender Policy",
-        value: "Office of the Vice-Chancellor",
-        href: "https://www.jkuat.ac.ke/about/policies/",
+        label: "JKUAT Gender & Harassment Policies",
+        value: "Full policy documents",
+        href: "https://www.jkuat.ac.ke/directorate/gender/?page_id=17224",
       },
       {
         label: "Student Code of Conduct",
