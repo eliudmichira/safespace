@@ -9,7 +9,14 @@ import {
   Building2,
   ExternalLink,
   GraduationCap,
+  FileText,
+  Download,
 } from "lucide-react"
+import { CAMPUS_SECURITY_DISPLAY, CAMPUS_SECURITY_TEL } from "@/lib/support-contacts"
+
+const USER_GUIDE_HTML = "/docs/user-guide.html"
+/** Swap this asset in `public/docs/` when your official PDF is ready. */
+const USER_GUIDE_PDF = "/docs/SafeSpace-User-Guide.pdf"
 
 const SECTIONS = [
   {
@@ -19,7 +26,7 @@ const SECTIONS = [
     items: [
       { label: "National GBV Hotline", value: "0800 720 990", href: "tel:0800720990" },
       { label: "Police Emergency", value: "999 / 112", href: "tel:999" },
-      { label: "JKUAT Campus Security", value: "0720 000 000", href: "tel:0720000000" },
+      { label: "JKUAT Campus Security", value: CAMPUS_SECURITY_DISPLAY, href: `tel:${CAMPUS_SECURITY_TEL}` },
       { label: "Healthcare / Health Center", value: "0720 111 111", href: "tel:0720111111" },
     ],
   },
@@ -120,6 +127,41 @@ export default function ResourcesPage() {
             <p className="text-muted-foreground text-base font-medium px-4">
               Hotlines, legal aid, counseling and JKUAT policies — all in one place.
             </p>
+          </div>
+
+          <div className="card-embossed p-6 md:p-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 pill lifted flex items-center justify-center text-primary">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-black text-base uppercase tracking-wider">User guide</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Step-by-step help for using SafeSpace. Open the guide in your browser, or download the PDF for
+                  printing or sharing.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href={USER_GUIDE_HTML}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="lifted-primary pill px-6 py-3 text-sm font-bold text-center flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <BookOpen className="h-4 w-4" />
+                View user guide
+                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+              </a>
+              <a
+                href={USER_GUIDE_PDF}
+                download
+                className="lifted pill px-6 py-3 text-sm font-bold text-center flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </a>
+            </div>
           </div>
 
           {SECTIONS.map((section) => {

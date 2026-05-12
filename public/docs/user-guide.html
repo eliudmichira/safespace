@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SafeSpace — User Guide</title>
+  <style>
+    :root { --bg: #0f1115; --card: #181c24; --text: #e8eaef; --muted: #9aa3b2; --accent: #6d9cf8; --line: #2a3140; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; font-size: 15px; }
+    header { padding: 2rem 1.25rem 1rem; max-width: 44rem; margin: 0 auto; border-bottom: 1px solid var(--line); }
+    h1 { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.35rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; }
+    main { max-width: 44rem; margin: 0 auto; padding: 1.25rem 1.25rem 3rem; }
+    section { margin-top: 2rem; }
+    h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); margin: 0 0 0.75rem; }
+    ul { padding-left: 1.1rem; margin: 0.5rem 0 0; }
+    li { margin: 0.4rem 0; }
+    .callout { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-top: 0.75rem; font-size: 0.92rem; }
+    a { color: var(--accent); }
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 2rem 1rem; border-top: 1px solid var(--line); }
+    @media print { body { background: #fff; color: #111; } .callout { border-color: #ccc; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SafeSpace User Guide</h1>
+    <p class="sub">JKUAT GBV reporting &amp; support — survivor-facing app. Replace this file with your own HTML/PDF if you publish a different version.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Getting started</h2>
+      <ul>
+        <li><strong>Register / log in</strong> — Create an account or sign in. Anonymous crisis chat may still require a lightweight anonymous sign-in for your safety log.</li>
+        <li><strong>Navigation</strong> — Use the bottom bar (mobile) or top menu: Home, Tracking, Counsel (chat), Report, Help (this hub).</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Home &amp; SOS</h2>
+      <ul>
+        <li><strong>SOS</strong> — Use only when you need immediate campus/security attention. Follow on-screen steps.</li>
+        <li><strong>Quick actions</strong> — Shortcuts to report, resources, and safety tools from the home screen.</li>
+      </ul>
+      <div class="callout">In immediate danger, call <strong>999 / 112</strong> or campus security <strong>067-5870101</strong>. National GBV helpline: <strong>0800 720 990</strong>.</div>
+    </section>
+    <section>
+      <h2>Report</h2>
+      <ul>
+        <li>Submit <strong>anonymous</strong> or <strong>identified</strong> reports with narrative, time/location, and optional evidence uploads.</li>
+        <li>Gender Welfare Office (GWO) uses submitted details to follow up outside the chat — not all flows are real-time in-app.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Counsel (chat)</h2>
+      <ul>
+        <li>The assistant gives <strong>trauma-informed</strong> guidance grounded in Kenyan law references in the system prompt.</li>
+        <li><strong>Sensitive phrases</strong> (e.g. assault, feeling unsafe) may trigger <strong>fixed safety messages</strong> with hotlines and reporting options so you still get help if the AI service fails.</li>
+        <li>Asking to “talk to a human” explains how to reach GWO <strong>in person</strong> or via the <strong>Report</strong> form — staff do not join this chat thread by default.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Tracking</h2>
+      <ul>
+        <li>Optional location sharing for trusted contacts or responders when you choose to enable it.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Help (resources)</h2>
+      <ul>
+        <li>Hotlines, legal links, counseling contacts, and JKUAT policy links.</li>
+        <li><a href="/docs/SafeSpace-User-Guide.pdf">Download PDF user guide</a> (replace <code>public/docs/SafeSpace-User-Guide.pdf</code> in the project with your official document).</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Privacy</h2>
+      <ul>
+        <li>Treat your login as sensitive. Review institutional privacy notices for how reports and escalations are stored.</li>
+      </ul>
+    </section>
+  </main>
+  <footer>SafeSpace — internal draft guide. Update this page to match your approved documentation.</footer>
+</body>
+</html>

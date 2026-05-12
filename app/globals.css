@@ -323,3 +323,17 @@ pre, code {
 nav[aria-label="Main navigation"] {
   padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
 }
+/* ── Custom Scrollbar for Modals ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--primary) 20%, transparent);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--primary) 40%, transparent);
+}

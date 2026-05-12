@@ -9,6 +9,7 @@ import { StatusCard } from "@/components/status-card"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { Phone } from "lucide-react"
+import { CAMPUS_SECURITY_DISPLAY, CAMPUS_SECURITY_TEL } from "@/lib/support-contacts"
 import { useAuth } from "@/contexts/AuthContext"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore"
@@ -242,14 +243,14 @@ export default function HomePage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: "Campus Security", tel: "0720000000", display: "0720 000 000" },
-                { label: "Police Emergency", tel: "999", display: "999 / 112" },
-                { label: "GBV Hotline", tel: "0800720990", display: "0800 720 990" },
-                { label: "Health Center", tel: "0720111111", display: "0720 111 111" },
+                { label: "Campus Security", display: CAMPUS_SECURITY_DISPLAY, telHref: CAMPUS_SECURITY_TEL },
+                { label: "Police Emergency", display: "999 / 112", telHref: "999" },
+                { label: "GBV Hotline", display: "0800 720 990", telHref: "0800720990" },
+                { label: "Health Center", display: "0720 111 111", telHref: "0720111111" },
               ].map((contact) => (
                 <a
-                  key={contact.tel}
-                  href={`tel:${contact.tel}`}
+                  key={contact.label}
+                  href={`tel:${contact.telHref}`}
                   className="lifted p-4 rounded-3xl flex flex-col group hover:scale-[1.02] active:scale-95 transition-all duration-300"
                 >
                   <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-1">

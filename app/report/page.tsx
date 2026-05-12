@@ -182,7 +182,7 @@ export default function ReportPage() {
         evidenceUrls: fileUrls,
         reporterId: currentUser.uid,
         status: "pending",
-        createdAt: serverTimestamp(),
+        timestamp: serverTimestamp(),
       });
       
       setIsSubmitted(true);

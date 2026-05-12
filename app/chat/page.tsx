@@ -16,18 +16,20 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { generateAIReply, type ChatTurn } from "@/lib/ai"
+import { getDeterministicCrisisReply, getImminentDangerReply, getStructuredCrisisReply } from "@/lib/crisis-replies"
+import { CAMPUS_SECURITY_DISPLAY } from "@/lib/support-contacts"
 import { db, auth } from "@/lib/firebase"
 import {
   collection,
   addDoc,
   doc,
-  updateDoc,
   query,
   where,
   orderBy,
   onSnapshot,
   serverTimestamp,
   getDocs,
+  getDoc,
   limit,
 } from "firebase/firestore"
 interface Message {
@@ -45,17 +47,22 @@ const HUMAN_REQUEST_PATTERNS: RegExp[] = [
   /\b(real|live|actual)\s+(human|person|counselor|counsellor)\b/i,
   /\bhuman\s+(help|support|counselor|counsellor)\b/i,
   /\bnot\s+(a|an)?\s*(bot|ai|robot)\b/i,
+  /\b(i\s+)?(need|want)\s+to\s+talk\b/i,
+  /\bcan\s+i\s+talk\b/i,
+  /\bcan\s+we\s+talk\b/i,
+  /\bjust\s+need\s+someone\s+to\s+talk\s+to\b/i,
+  /\btalk\s+to\s+someone\b/i,
 ]
 
 function wantsHuman(text: string): boolean {
   return HUMAN_REQUEST_PATTERNS.some((re) => re.test(text))
 }
 
-const HANDOFF_MESSAGE = `I've flagged your chat for a human counselor from the Gender Welfare Office. They'll join this conversation as soon as one is available — typically within a few minutes during working hours.
+const HUMAN_SUPPORT_MESSAGE = `You've asked to speak with a person. This chat is mainly answered by the automated assistant — Gender Welfare staff are not able to read or join this thread in real time.
 
-While you wait, you can keep typing here; everything you write will be visible to the counselor when they pick up.
+To reach someone directly: visit the Gender Welfare Office (Admin Block, Room 205) during working hours, or use the Report section and include contact details so the office can follow up with you outside this chat.
 
-If you are in immediate danger, use the SOS button on the home screen, call 999 / 112, or contact Campus Security at 0720 000 000.`
+If you are in immediate danger: use the SOS button on the home screen, call 999 / 112, campus security ${CAMPUS_SECURITY_DISPLAY}, or the National GBV helpline 0800 720 990.`
 
 const INITIAL_MESSAGE: Message = {
   id: "1",
@@ -80,11 +87,11 @@ const QUICK_RESPONSES = [
   "I need information about resources",
 ]
 
-const ACK_MESSAGE = `Thank you for reaching out. Your message has been received and a trained counselor from the Gender Welfare Office will respond as soon as possible — typically within a few minutes during working hours.
+const AI_ERROR_MESSAGE = `The assistant could not generate a reply just now (for example a network issue or a safety filter). Please try sending your message again in a moment.
 
-If you are in immediate danger, please use the SOS button on the home screen, call 999 / 112, or contact Campus Security at 0720 000 000. You can also share your live location from the Tracking page.
+If you need help right away: SOS on the home screen, police 999 / 112, campus security ${CAMPUS_SECURITY_DISPLAY}, National GBV helpline 0800 720 990.
 
-Everything you share here is confidential.`
+Use the Resources and Report pages in this app for fixed contact details and reporting options.`
 
 const HIGH_RISK_PATTERNS: RegExp[] = [
   /\b(kill (myself|me)|suicide|end (it|my life)|don'?t want to live|hurt myself|cut myself)\b/i,
@@ -131,44 +138,53 @@ export default function ChatPage() {
       const params = new URLSearchParams(window.location.search);
       const forcedChatId = params.get("id");
       
-       let currentChatId: string | null = null;
-       const chatsRef = collection(db, "chats");
-      
-      // Try local cache first for speed
-      const cachedId = localStorage.getItem(`safespace_chat_${currentUser.uid}`);
-      if (cachedId && !forcedChatId) {
-        currentChatId = cachedId;
-      } else if (forcedChatId) {
+      let currentChatId: string | null = null;
+      const chatsRef = collection(db, "chats");
+      const cacheKey = `safespace_chat_${currentUser.uid}`;
+
+      if (forcedChatId) {
         currentChatId = forcedChatId;
       } else {
-        // Find existing chat for the user
-        const q = query(chatsRef, where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(1));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          // Create new chat
-          const newChat = await addDoc(chatsRef, {
-            userId: currentUser.uid,
-            createdAt: serverTimestamp(),
-            status: "ai",
-          });
-          currentChatId = newChat.id;
-          
-          // Add initial message
-          await addDoc(collection(db, "chats", currentChatId, "messages"), {
-            role: "assistant",
-            content: INITIAL_MESSAGE.content,
-            timestamp: serverTimestamp()
-          });
-        } else {
-          currentChatId = querySnapshot.docs[0].id;
+        const cachedId = localStorage.getItem(cacheKey);
+        let usedCache = false;
+        if (cachedId) {
+          const cachedSnap = await getDoc(doc(db, "chats", cachedId));
+          const ownerId = cachedSnap.data()?.userId;
+          if (cachedSnap.exists() && ownerId === currentUser.uid) {
+            currentChatId = cachedId;
+            usedCache = true;
+          } else {
+            localStorage.removeItem(cacheKey);
+          }
+        }
+
+        if (!usedCache) {
+          const q = query(chatsRef, where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(1));
+          const querySnapshot = await getDocs(q);
+
+          if (querySnapshot.empty) {
+            const newChat = await addDoc(chatsRef, {
+              userId: currentUser.uid,
+              createdAt: serverTimestamp(),
+              status: "ai",
+            });
+            currentChatId = newChat.id;
+
+            await addDoc(collection(db, "chats", currentChatId, "messages"), {
+              role: "assistant",
+              content: INITIAL_MESSAGE.content,
+              timestamp: serverTimestamp(),
+            });
+          } else {
+            currentChatId = querySnapshot.docs[0].id;
+          }
         }
       }
       
       setChatId(currentChatId);
-      if (currentChatId) {
-        localStorage.setItem(`safespace_chat_${currentUser.uid}`, currentChatId);
-      }
+      if (!currentChatId) return;
+
+      localStorage.setItem(cacheKey, currentChatId);
 
       // Subscribe to messages
       const messagesRef = collection(db, "chats", currentChatId, "messages");
@@ -237,7 +253,7 @@ export default function ChatPage() {
       authorUid: currentUser?.uid ?? null,
     });
 
-    // High-risk content detection — flag silently to officers and warn the user.
+    // High-risk content detection — flag silently for staff review (no promise of in-chat response).
     if (detectHighRisk(userMessageContent)) {
       try {
         await addDoc(collection(db, "escalations"), {
@@ -252,29 +268,44 @@ export default function ChatPage() {
       }
     }
 
-    // Handoff logic: if user wants human and we're currently in AI mode
-    if (chatStatus === "ai" && wantsHuman(userMessageContent)) {
-      await updateDoc(doc(db, "chats", chatId), { status: "awaiting_human" });
+    const priorUserLines = messages
+      .filter((m) => m.role === "user")
+      .slice(-8)
+      .map((m) => m.content)
+    const userContextBlob = [...priorUserLines, userMessageContent].join("\n")
+
+    const imminentReply = getImminentDangerReply(userMessageContent, userContextBlob)
+    if (imminentReply) {
       await addDoc(collection(db, "chats", chatId, "messages"), {
         role: "assistant",
-        content: HANDOFF_MESSAGE,
+        content: imminentReply,
         timestamp: serverTimestamp(),
-      });
-      
-      // Notify admins
-      await addDoc(collection(db, "support_requests"), {
-        chatId,
-        userId: currentUser?.uid || "anonymous",
-        type: "chat",
-        status: "pending",
-        createdAt: serverTimestamp(),
-      });
+      })
+      return
+    }
 
-      return;
+    // Human / counsellor intent before other canned paths so "I need to talk" is not treated as a repeat disclosure.
+    if (chatStatus === "ai" && wantsHuman(userMessageContent)) {
+      await addDoc(collection(db, "chats", chatId, "messages"), {
+        role: "assistant",
+        content: HUMAN_SUPPORT_MESSAGE,
+        timestamp: serverTimestamp(),
+      })
+      return
+    }
+
+    const structuredReply = getStructuredCrisisReply(userMessageContent)
+    if (structuredReply) {
+      await addDoc(collection(db, "chats", chatId, "messages"), {
+        role: "assistant",
+        content: structuredReply,
+        timestamp: serverTimestamp(),
+      })
+      return
     }
 
     // Gate AI: only reply if we are in 'ai' status
-    if (chatStatus !== "ai") return;
+    if (chatStatus !== "ai") return
 
     setIsTyping(true)
     try {
@@ -290,9 +321,10 @@ export default function ChatPage() {
       })
     } catch (err) {
       console.error("AI reply failed:", err)
+      const crisisFallback = getDeterministicCrisisReply(userMessageContent, userContextBlob)
       await addDoc(collection(db, "chats", chatId, "messages"), {
         role: "assistant",
-        content: ACK_MESSAGE,
+        content: crisisFallback ?? AI_ERROR_MESSAGE,
         timestamp: serverTimestamp(),
         system: true,
       })

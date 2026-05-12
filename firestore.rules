@@ -82,9 +82,14 @@ service cloud.firestore {
 
     // -- Chats --
     match /chats/{chatId} {
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      // resource is null if the doc was deleted — avoid touching resource.data (rules error → deny).
       allow read, update: if isAuthenticated()
-        && (resource.data.userId == request.auth.uid || isOfficer());
+        && (
+          (resource != null && resource.data.userId == request.auth.uid)
+          || isOfficer()
+        );
 
       match /messages/{messageId} {
         allow read, write: if isAuthenticated();

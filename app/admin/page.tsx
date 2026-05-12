@@ -22,7 +22,20 @@ import {
   Eye,
   Phone,
   BookOpen,
+  Image as ImageIcon,
+  Download,
+  ExternalLink,
+  X,
+  Calendar,
+  EyeOff,
 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, addDoc, serverTimestamp, where } from "firebase/firestore"
@@ -51,6 +64,7 @@ export default function AdminDashboard() {
   const { user, role, loading } = useAuth()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("security")
+  const [selectedCase, setSelectedCase] = useState<any | null>(null)
 
   const handleExport = () => {
     const rows = [
@@ -80,10 +94,7 @@ export default function AdminDashboard() {
   }
 
   const showCase = (c: any) => {
-    toast({
-      title: `Case ${c.id.slice(0, 8)}`,
-      description: `${c.type} · ${c.priority.toUpperCase()} · ${c.status} · ${c.anonymous ? "Anonymous" : "Identified"} · ${new Date(c.date).toLocaleString()}`,
-    })
+    setSelectedCase(c)
   }
 
   useEffect(() => {
@@ -166,11 +177,13 @@ export default function AdminDashboard() {
 
         return {
           id: doc.id,
+          ...data,
           type: data.incidentType?.[0] ? data.incidentType[0].charAt(0).toUpperCase() + data.incidentType[0].slice(1) : "Other",
           date: data.timestamp?.toDate() || new Date(),
           status: data.status || "pending",
           priority,
           anonymous: data.reportType === "anonymous",
+          evidenceUrls: data.evidenceUrls || [],
         }
       })
       setRecentCases(cases)
@@ -537,71 +550,6 @@ export default function AdminDashboard() {
 
             {/* Gender Welfare Office Dashboard */}
             <TabsContent value="admin" className="space-y-8">
-              {/* Chat Support Queue */}
-              <div className="card-embossed p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-xl font-bold flex items-center gap-3">
-                      <Phone className="h-6 w-6 text-primary" />
-                      Chat Support Queue
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {supportRequests.length} user{supportRequests.length === 1 ? "" : "s"} waiting for a human counselor
-                    </p>
-                  </div>
-                </div>
-
-                {supportRequests.length === 0 ? (
-                  <div className="recessed py-12 rounded-[2rem] text-center text-muted-foreground">
-                    <p className="text-sm font-bold uppercase tracking-widest opacity-50">No pending chat requests</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {supportRequests.map((req) => (
-                      <div
-                        key={req.id}
-                        className="flex flex-col md:flex-row md:items-center justify-between p-6 lifted rounded-[2rem] bg-primary/5 border-primary/20"
-                      >
-                        <div className="flex items-center gap-6">
-                          <div className="h-12 w-12 pill lifted-primary flex items-center justify-center shrink-0">
-                            <Phone className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-mono text-xs font-bold text-muted-foreground">CHAT: {req.chatId.slice(0, 8)}</span>
-                              <Badge className="pill bg-warning text-warning-foreground text-[10px] uppercase font-bold tracking-tighter animate-pulse">Waiting</Badge>
-                            </div>
-                            <h4 className="text-lg font-bold text-foreground">User {req.userId.slice(0, 8)} needs support</h4>
-                            <p className="text-xs text-muted-foreground">Requested {formatTime(req.createdAt)}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 mt-4 md:mt-0">
-                          <Button
-                            className="pill lifted-primary h-12 px-6 font-bold"
-                            onClick={async () => {
-                              // Join Chat logic
-                              await updateDoc(doc(db, "chats", req.chatId), { 
-                                status: "human",
-                                respondingOfficerId: user?.uid,
-                                respondingOfficerRole: role
-                              });
-                              await updateDoc(doc(db, "support_requests", req.id), { 
-                                status: "joined",
-                                joinedBy: user?.uid,
-                                joinedAt: serverTimestamp()
-                              });
-                              router.push(`/chat?id=${req.chatId}`);
-                            }}
-                          >
-                            Join Chat
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               <div className="card-embossed p-8">
                 <div className="flex items-center justify-between mb-8">
@@ -681,6 +629,256 @@ export default function AdminDashboard() {
         </div>
       </main>
       <Toaster />
+
+      {/* Case Details Modal */}
+      <Dialog open={!!selectedCase} onOpenChange={(open) => !open && setSelectedCase(null)}>
+        <DialogContent showCloseButton={false} className="max-w-[1600px] w-full h-[95vh] overflow-y-auto overflow-x-hidden card-embossed border-none p-0 custom-scrollbar">
+          {selectedCase && (
+            <div className="flex flex-col">
+              <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 sticky top-0 bg-background/90 backdrop-blur-xl z-20">
+                <DialogHeader className="p-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={cn("h-3 w-3 pill animate-pulse", 
+                      selectedCase.status === 'resolved' ? "bg-safe" : 
+                      selectedCase.status === 'investigating' ? "bg-warning" : 
+                      "bg-emergency"
+                    )} />
+                    <span className="font-mono text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">
+                      Case #{selectedCase.id.slice(0, 8)}
+                    </span>
+                  </div>
+                  <DialogTitle className="text-4xl font-black tracking-tighter leading-none">{selectedCase.type}</DialogTitle>
+                </DialogHeader>
+
+                <div className="flex items-center gap-3 bg-black/20 p-2 pill border border-white/5">
+                  {["pending", "investigating", "resolved"].map((status) => (
+                    <Button
+                      key={status}
+                      variant="ghost"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        await updateDoc(doc(db, "reports", selectedCase.id), { status })
+                        setSelectedCase({ ...selectedCase, status })
+                        toast({ title: "Status Updated", description: `Case marked as ${status}.` })
+                      }}
+                      className={cn(
+                        "pill h-10 px-6 text-[10px] font-black uppercase tracking-widest transition-all duration-300",
+                        selectedCase.status === status 
+                          ? "lifted-primary text-white scale-105" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {status}
+                    </Button>
+                  ))}
+                  <div className="w-px h-6 bg-white/10 mx-1" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setSelectedCase(null)}
+                    className="h-10 w-10 pill lifted text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-10">
+
+                <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-16">
+                  {/* Main Details & Evidence */}
+                  <div className="xl:col-span-1 space-y-16">
+                    <section className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-2xl font-black uppercase tracking-tighter text-primary flex items-center gap-3">
+                          <ImageIcon className="h-8 w-8" />
+                          Evidence Gallery
+                        </h3>
+                        {selectedCase.evidenceUrls && (
+                          <Badge variant="outline" className="pill px-6 py-2 font-black text-xs uppercase tracking-widest bg-primary/10 text-primary border-primary/20">
+                            {selectedCase.evidenceUrls.length} File{selectedCase.evidenceUrls.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {selectedCase.evidenceUrls && selectedCase.evidenceUrls.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-10">
+                          {selectedCase.evidenceUrls.map((url: string, idx: number) => {
+                            const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(url) || url.includes("cloudinary");
+                            return (
+                              <div key={idx} className="group relative">
+                                <div className="recessed overflow-hidden rounded-[3rem] aspect-video flex items-center justify-center bg-black/40 hover:bg-black/20 transition-all duration-1000 border border-white/10 shadow-2xl">
+                                  {isImage ? (
+                                    <img 
+                                      src={url} 
+                                      alt={`Evidence ${idx + 1}`} 
+                                      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-[2000ms] ease-out"
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-6 p-12 text-center">
+                                      <div className="h-24 w-24 pill lifted flex items-center justify-center text-primary bg-background">
+                                        <FileText className="h-12 w-12" />
+                                      </div>
+                                      <div>
+                                        <p className="text-lg font-black uppercase tracking-widest text-foreground">Attached Document</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Click to view or download file</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center gap-6 backdrop-blur-xl">
+                                    <p className="text-white text-xl font-black uppercase tracking-[0.3em] translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Evidence #{idx + 1}</p>
+                                    <div className="flex items-center gap-6">
+                                      <a 
+                                        href={url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="h-20 w-20 pill lifted-primary flex items-center justify-center text-white hover:scale-110 transition-all shadow-2xl"
+                                      >
+                                        <ExternalLink className="h-8 w-8" />
+                                      </a>
+                                      <a 
+                                        href={url} 
+                                        download 
+                                        className="h-20 w-20 pill lifted bg-white flex items-center justify-center text-primary hover:scale-110 transition-all shadow-2xl"
+                                      >
+                                        <Download className="h-8 w-8" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="recessed py-24 rounded-[4rem] text-center space-y-6 border-2 border-dashed border-white/5 bg-black/10">
+                          <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground/10" />
+                          <div className="space-y-1">
+                            <p className="text-xl font-black text-muted-foreground uppercase tracking-widest">No Evidence Attached</p>
+                            <p className="text-xs text-muted-foreground/60 italic">This reporter did not provide any files.</p>
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    <section className="space-y-6 pt-8">
+                      <h3 className="text-sm font-black uppercase tracking-[0.4em] text-primary/60 flex items-center gap-3 ml-2">
+                        <FileText className="h-4 w-4" />
+                        Incident Narrative
+                      </h3>
+                      <div className="recessed p-10 rounded-[3rem] bg-black/10 border border-white/5">
+                        <p className="text-xl leading-[1.6] font-medium text-foreground/90 whitespace-pre-wrap tracking-tight">
+                          {selectedCase.description || "No description provided."}
+                        </p>
+                      </div>
+                    </section>
+                  </div>
+
+                  {/* Sidebar Details */}
+                  <div className="space-y-12">
+                    <section className="space-y-6">
+                      <h3 className="text-sm font-black uppercase tracking-[0.3em] text-primary ml-2">Logistics</h3>
+                      <div className="recessed p-8 rounded-[3rem] space-y-10 bg-black/5">
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] ml-1">Incident Date & Time</p>
+                          <div className="flex items-start gap-5">
+                            <div className="h-12 w-12 pill lifted flex items-center justify-center shrink-0 text-primary bg-background">
+                              <Calendar className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="text-xl font-black tracking-tighter leading-none mb-1">
+                                {selectedCase.incidentDate || "Unknown Date"}
+                              </p>
+                              <p className="text-sm font-bold text-muted-foreground">
+                                {selectedCase.incidentTime || "Unknown Time"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] ml-1">Location / Venue</p>
+                          <div className="flex items-start gap-5">
+                            <div className="h-12 w-12 pill lifted flex items-center justify-center shrink-0 text-primary bg-background">
+                              <MapPin className="h-6 w-6" />
+                            </div>
+                            <p className="text-xl font-black tracking-tighter leading-tight">
+                              {selectedCase.incidentLocation || "Unknown Location"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="space-y-6">
+                      <h3 className="text-sm font-black uppercase tracking-[0.3em] text-primary ml-2">Reporter Information</h3>
+                      <div className="recessed p-8 rounded-[3rem] space-y-8 bg-black/5">
+                        {selectedCase.anonymous ? (
+                          <div className="flex flex-col items-center text-center p-4">
+                            <div className="h-16 w-16 pill lifted flex items-center justify-center bg-muted/20 mb-4">
+                              <EyeOff className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">Anonymous Report</p>
+                            <p className="text-[10px] text-muted-foreground/60 mt-1">Identity protected by system</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-4">
+                              <div className="h-14 w-14 pill lifted-primary flex items-center justify-center text-white text-xl font-black">
+                                {selectedCase.contactName?.charAt(0) || "U"}
+                              </div>
+                              <div>
+                                <p className="text-lg font-black tracking-tight">{selectedCase.contactName || "Identified User"}</p>
+                                <p className="text-[10px] text-primary font-black uppercase tracking-widest">Reporter Profile</p>
+                              </div>
+                            </div>
+                            <div className="space-y-3 pt-2">
+                              {selectedCase.contactEmail && (
+                                <a href={`mailto:${selectedCase.contactEmail}`} className="flex items-center gap-4 p-4 pill recessed bg-background/50 hover:bg-background transition-colors group">
+                                  <div className="h-10 w-10 pill lifted flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <FileText className="h-5 w-5" />
+                                  </div>
+                                  <span className="text-sm font-bold truncate">{selectedCase.contactEmail}</span>
+                                </a>
+                              )}
+                              {selectedCase.contactPhone && (
+                                <a href={`tel:${selectedCase.contactPhone}`} className="flex items-center gap-4 p-4 pill recessed bg-background/50 hover:bg-background transition-colors group">
+                                  <div className="h-10 w-10 pill lifted flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <Phone className="h-5 w-5" />
+                                  </div>
+                                  <span className="text-sm font-bold">{selectedCase.contactPhone}</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="space-y-6">
+                      <h3 className="text-sm font-black uppercase tracking-[0.3em] text-primary ml-2">Involved Parties</h3>
+                      <div className="recessed p-8 rounded-[3rem] space-y-8 bg-black/5">
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] ml-1">Alleged Perpetrator</p>
+                          <div className="p-4 pill recessed bg-background/50">
+                            <p className="text-sm font-bold leading-relaxed">{selectedCase.perpetratorInfo || "Not specified"}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] ml-1">Potential Witnesses</p>
+                          <div className="p-4 pill recessed bg-background/50">
+                            <p className="text-sm font-bold leading-relaxed">{selectedCase.witnessInfo || "Not specified"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
